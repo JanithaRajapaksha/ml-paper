@@ -129,12 +129,15 @@ Polynomial Regression was used to examine whether a simple nonlinear seasonal re
 SVR with an RBF kernel was included as a more flexible nonlinear alternative \cite{smola2004svr}. SVR seeks a function whose deviations from the observed targets remain within an $\epsilon$-insensitive margin while penalizing deviations outside that margin. The experiment used $C=10$ and $\epsilon=0.1$. Because SVR is sensitive to scale, the input predictors were processed using the same standardization and encoding pipeline as Linear Regression, and the target variable was standardized during fitting through a transformed-target regressor. Predictions were then automatically returned on the original arrival-count scale. No hyperparameter search was performed, so the reported SVR results apply specifically to this configuration.
 
 \subsection{Evaluation Metrics}
-Performance was evaluated using MAE, MSE, RMSE, and $R^2$, as required for a regression problem. For $n$ observations with actual values $y_i$ and predictions $\hat{y}_i$, MAE and RMSE are defined as
+Performance was evaluated using MAE, MSE, RMSE, and $R^2$. For $n$ observations with actual values $y_i$ and predictions $\hat{y}_i$, these metrics are
 \begin{align}
     \mathrm{MAE} &= \frac{1}{n}\sum_{i=1}^{n}|y_i-\hat{y}_i|,\\
-    \mathrm{RMSE} &= \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}.
+    \mathrm{MSE} &= \frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2,\\
+    \mathrm{RMSE} &= \sqrt{\mathrm{MSE}},\\
+    R^2 &= 1-\frac{\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}
+    {\sum_{i=1}^{n}(y_i-\bar{y})^2}.
 \end{align}
-Lower MAE, MSE, and RMSE values indicate smaller prediction errors. The $R^2$ score measures the proportion of target variance explained relative to predicting the subset mean; values closer to one indicate a better fit.
+Here, $\bar{y}$ is the mean observed target. Lower error values are better, while $R^2$ closer to one indicates stronger performance relative to the mean baseline.
 
 \section{Results}
 
