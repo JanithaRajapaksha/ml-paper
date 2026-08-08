@@ -1,5 +1,4 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass[conference,a4paper]{IEEEtran}
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -25,7 +24,7 @@ jlkrajapaksha@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Accurate forecasts of tourist arrivals can support planning and resource allocation in the tourism sector. This study investigates the prediction of monthly tourist arrivals to Sri Lanka from individual origin countries using economic, environmental, and tourism-related variables. A dataset containing 750 observations from 2018 to 2024 was prepared for a supervised regression task. Numerical attributes were standardized and categorical attributes were one-hot encoded. Two evaluation strategies were compared: a chronological split for realistic future-year forecasting and a random 70/15/15 split for interpolation within the observed period. Linear Regression, second-degree Polynomial Regression, and radial basis function (RBF) Support Vector Regression (SVR) were evaluated using mean absolute error (MAE), mean squared error (MSE), root mean squared error (RMSE), and the coefficient of determination ($R^2$). On the chronological 2024 test set, Linear Regression achieved an MAE of 5,011.12, an RMSE of 6,729.14, and an $R^2$ score of 0.546, while SVR obtained a negative $R^2$ of $-0.470$. Under random testing, SVR instead achieved an RMSE of 4,064.67 and an $R^2$ of 0.835. This large difference is attributed to temporal distribution shift: the chronological training data combine pre-pandemic demand, the COVID-19 collapse, and early recovery, whereas 2023 and 2024 follow a later and different recovery pattern. Random splitting mixes these regimes and therefore produces more optimistic results that do not represent genuine future-year forecasting.
+Accurate forecasts of tourist arrivals can support planning and resource allocation in the tourism sector. This study investigates the prediction of monthly tourist arrivals to Sri Lanka from individual origin countries using economic, environmental, and tourism-related variables. A dataset containing 750 observations from 2018 to 2024 was prepared for a supervised regression task. Numerical attributes were standardized and categorical attributes were one-hot encoded. Two evaluation strategies were compared: a chronological split for realistic future-year forecasting and a random split containing 70 percent training data, 15 percent validation data, and 15 percent test data for interpolation within the observed period. Linear Regression, second-degree Polynomial Regression, and radial basis function Support Vector Regression were evaluated using mean absolute error, mean squared error, root mean squared error, and R-squared. On the chronological 2024 test set, Linear Regression achieved a mean absolute error of 5,011.12, a root mean squared error of 6,729.14, and an R-squared score of 0.546, while Support Vector Regression obtained a negative R-squared score of -0.470. Under random testing, Support Vector Regression instead achieved a root mean squared error of 4,064.67 and an R-squared score of 0.835. This large difference is attributed to temporal distribution shift: the chronological training data combine pre-pandemic demand, the COVID-19 collapse, and early recovery, whereas 2023 and 2024 follow a later and different recovery pattern. Random splitting mixes these regimes and therefore produces more optimistic results that do not represent genuine future-year forecasting.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -35,14 +34,14 @@ tourist arrivals, machine learning, linear regression, polynomial regression, su
 \section{Introduction}
 Tourism is an important contributor to the Sri Lankan economy, and changes in international arrivals affect accommodation demand, transport services, employment, and public-sector planning. However, arrivals vary with season, origin country, economic conditions, environmental conditions, and unexpected disruptions. Estimating future demand from these factors is therefore a useful regression problem.
 
-This study develops and evaluates machine-learning models that predict the monthly number of tourists arriving in Sri Lanka from a given origin country. The main objectives are to: (1) examine the structure and quality of the selected dataset; (2) prepare economic, environmental, and tourism-related variables for modelling; (3) train Linear Regression, Polynomial Regression, and SVR models; and (4) compare chronological future-year evaluation with randomized interpolation to determine how the split strategy affects reported performance.
+This study develops and evaluates machine-learning models that predict the monthly number of tourists arriving in Sri Lanka from a given origin country. The main objectives are to: (1) examine the structure and quality of the selected dataset; (2) prepare economic, environmental, and tourism-related variables for modeling; (3) train Linear Regression, Polynomial Regression, and Support Vector Regression (SVR) models; and (4) compare chronological future-year evaluation with randomized interpolation to determine how the split strategy affects reported performance.
 
 The remainder of this paper is organized as follows. Section II describes the dataset, exploratory analysis, preprocessing, experimental design, and models. Section III presents the evaluation results and their interpretation. Section IV discusses strengths, limitations, and practical implications, while Section V concludes the paper and identifies possible future improvements.
 
 \section{Methodology}
 
 \subsection{Dataset Description}
-The dataset contains 750 observations and 13 original variables covering the period from 2018 to 2024. Each observation represents the tourist arrivals recorded for an origin country in a particular month. The response variable, \texttt{totalCount}, is the number of arrivals. Predictor variables include year, month, origin country, exchange rate, mean apparent temperature, sunshine duration, rainfall, precipitation hours, number of tourism establishments, number of rooms, an air-passenger fares index, and a consumer price index.
+The dataset contains 750 observations and 13 original variables covering the period from 2018 to 2024 \cite{peasinghe_tourist_dataset}. Each observation represents the tourist arrivals recorded for an origin country in a particular month. One variable, \texttt{totalCount}, is the response, leaving 12 candidate predictor features. These predictors are year, month, origin country, exchange rate, mean apparent temperature, sunshine duration, rainfall, precipitation hours, number of tourism establishments, number of rooms, an air-passenger fares index, and a consumer price index.
 
 The target ranges from 10 to 52,881 arrivals, with a mean of 8,621.44 and a standard deviation of 9,127.99. This difference between the mean and standard deviation, together with the observed histogram, indicates a wide and right-skewed target distribution. No missing values or duplicate rows were detected. The dataset source and the original sources of its economic, weather, and tourism variables must be cited in the final version of the paper. % TODO: Add verified dataset-source citations.
 
@@ -64,9 +63,9 @@ Total & 2018--2024 & 750 \\
 \end{table}
 
 \subsection{Exploratory Data Analysis}
-Exploratory analysis examined the target distribution, total arrivals over time, the leading origin countries, monthly seasonality, and correlations between numerical variables and the target. Among the numerical predictors, the air-passenger fares index showed the strongest positive linear correlation with arrivals ($r=0.241$), while precipitation hours showed the strongest negative correlation ($r=-0.255$). These correlations are modest and do not account for the categorical effect of origin country, but they suggest that both economic and seasonal conditions are relevant. The time series also contains the sharp changes associated with the COVID-19 period, making generalization to later years challenging.
+Exploratory analysis \cite{tukey1977eda} examined the target distribution, total arrivals over time, the leading origin countries, monthly seasonality, and correlations between numerical variables and the target. Among the numerical predictors, the air-passenger fares index showed the strongest positive linear correlation with arrivals ($r=0.241$), while precipitation hours showed the strongest negative correlation ($r=-0.255$). These correlations are modest and do not account for the categorical effect of origin country, but they suggest that both economic and seasonal conditions are relevant. The time series also contains the sharp changes associated with the COVID-19 period, making generalization to later years challenging.
 
-Figure~\ref{fig:target-distribution} confirms that arrival counts are right-skewed: most country-month observations are concentrated at lower values, while a smaller number of high-volume observations form a long upper tail. This variation explains why RMSE is consistently higher than MAE, since RMSE places more weight on the comparatively large errors made for high-arrival observations.
+Fig.~\ref{fig:target-distribution} confirms that arrival counts are right-skewed: most country-month observations are concentrated at lower values, while a smaller number of high-volume observations form a long upper tail. This variation explains why RMSE is consistently higher than MAE, since RMSE places more weight on the comparatively large errors made for high-arrival observations.
 
 \begin{figure}[htbp]
 \centering
@@ -84,7 +83,7 @@ The distribution by origin country is shown in Fig.~\ref{fig:country-distributio
 \label{fig:country-distribution}
 \end{figure}
 
-Figure~\ref{fig:feature-correlations} compares the individual Pearson correlations between each numerical predictor and tourist arrivals. The air-passenger fares index has the strongest positive correlation, while precipitation hours has the strongest negative correlation. However, all coefficients are relatively modest. The graph therefore indicates that no single numerical predictor explains tourist arrivals adequately and that the models must combine temporal, economic, environmental, capacity, and origin-country information.
+Fig.~\ref{fig:feature-correlations} compares the individual Pearson correlations between each numerical predictor and tourist arrivals. The air-passenger fares index has the strongest positive correlation, while precipitation hours has the strongest negative correlation. However, all coefficients are relatively modest. The graph therefore indicates that no single numerical predictor explains tourist arrivals adequately and that the models must combine temporal, economic, environmental, capacity, and origin-country information.
 
 \begin{figure*}[htbp]
 \centering
@@ -102,7 +101,7 @@ The monthly totals in Fig.~\ref{fig:arrival-timeline} expose the main temporal c
 \label{fig:arrival-timeline}
 \end{figure*}
 
-Figure~\ref{fig:seasonal-boxplot} shows that both the median and spread of arrivals vary across calendar months. However, substantial overlap remains among the monthly distributions, indicating that month alone cannot explain the target and motivating the inclusion of country, economic, environmental, and tourism-capacity predictors.
+Fig.~\ref{fig:seasonal-boxplot} shows that both the median and spread of arrivals vary across calendar months. However, substantial overlap remains among the monthly distributions, indicating that month alone cannot explain the target and motivating the inclusion of country, economic, environmental, and tourism-capacity predictors.
 
 \begin{figure}[htbp]
 \centering
@@ -112,23 +111,14 @@ Figure~\ref{fig:seasonal-boxplot} shows that both the median and spread of arriv
 \end{figure}
 
 \subsection{Data Preparation}
-A date variable was constructed from the year and month for chronological splitting and visualization, but it was excluded from the model inputs. Month names were converted to their calendar positions. Numerical predictors were standardized, while month and origin country were one-hot encoded; unknown categories were ignored so that the pipeline could process future data. These transformations were fitted using only the training subset through a scikit-learn pipeline, reducing the risk of data leakage.
+The original numerical \texttt{year} feature was retained as a model input. A separate calendar-date column was derived from year and month only for chronological splitting and visualization, and only this derived date column was excluded from modeling. Therefore, the full model retained all 12 original predictors: 10 numerical features and two categorical features. Month names were converted to their calendar positions. Numerical predictors were standardized, while month and origin country were one-hot encoded; unknown categories were ignored so that the pipeline could process future data. In the chronological training set, one-hot encoding expanded the 12 raw inputs to 49 transformed features for Linear Regression and SVR. Polynomial Regression produced 39 transformed features because month was represented by two scaled polynomial terms rather than 12 one-hot month indicators. These transformations were fitted using only the training subset through a scikit-learn pipeline \cite{pedregosa2011sklearn}, reducing the risk of data leakage.
 
-As shown in Table~\ref{tab:dataset-split}, data from 2018--2022 were used for training, 2023 for validation, and 2024 for final testing. This chronological experiment is the primary evaluation because the intended task is prediction of later observations from earlier data. A second experiment randomly divided individual observations into approximately 70\% training, 15\% validation, and 15\% testing subsets using a fixed random state of 42. The random experiment was included to measure interpolation when all subsets are drawn from the same overall historical period. It was not treated as evidence of future-year forecasting performance because rows from the same month and year share several economic, weather, and tourism-capacity values. A reduced feature set was also examined as a secondary experiment, but it performed substantially worse than the complete feature set.
+The primary chronological split used 2018--2022 for training, 2023 for validation, and 2024 for testing (Table~\ref{tab:dataset-split}). A random 70/15/15 split measured interpolation but was considered optimistic for future forecasting. A reduced Linear Regression experiment retained month, country, and six numerical predictors with absolute target correlation of at least 0.15, giving eight raw features.
 
-The preprocessing pipeline was fitted independently within each training partition. Consequently, numerical scaling parameters and one-hot-encoding categories were learned without using the corresponding validation or test targets. The notebook also visualizes the target distribution after chronological splitting and saves the plot as \texttt{chronological\_split\_distribution.png}. This diagnostic makes the higher target level and changed spread in the later recovery years visible and supports the distribution-shift interpretation.
-
-\IfFileExists{figures/chronological_split_distribution.png}{%
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\columnwidth]{figures/chronological_split_distribution.png}
-\caption{Target distributions after chronological training, validation, and test splitting.}
-\label{fig:split-distribution}
-\end{figure}
-}{}
+The preprocessing pipeline was fitted independently within each training partition. Consequently, numerical scaling parameters and one-hot-encoding categories were learned without using the corresponding validation or test targets. The target distributions across the chronological partitions were also examined to assess temporal stability. The higher target level and changed spread in the validation and test periods provide further evidence of distribution shift during the later stages of tourism recovery.
 
 \subsection{Regression Models}
-Linear Regression was used as an interpretable baseline. For a feature vector $\mathbf{x}$, its prediction is
+Linear and polynomial regression provide standard supervised-learning baselines \cite{hastie2009elements}. For a feature vector $\mathbf{x}$, the linear prediction is
 \begin{equation}
     \hat{y}=\beta_0+\sum_{j=1}^{p}\beta_j x_j,
 \end{equation}
@@ -136,7 +126,7 @@ where $\beta_0$ is the intercept and $\beta_j$ denotes the coefficient associate
 
 Polynomial Regression was used to examine whether a simple nonlinear seasonal relationship improved prediction. A second-degree polynomial expansion was applied only to the month variable, while the remaining numerical and categorical predictors were processed in the same manner as in the linear pipeline. Restricting the expansion to month avoided a large number of unstable interaction terms in this relatively small dataset. Both linear estimators used ordinary least squares with the default scikit-learn settings.
 
-SVR with an RBF kernel was included as a more flexible nonlinear alternative. SVR seeks a function whose deviations from the observed targets remain within an $\epsilon$-insensitive margin while penalizing deviations outside that margin. The experiment used $C=10$ and $\epsilon=0.1$. Because SVR is sensitive to scale, the input predictors were processed using the same standardization and encoding pipeline as Linear Regression, and the target variable was standardized during fitting through a transformed-target regressor. Predictions were then automatically returned on the original arrival-count scale. No hyperparameter search was performed, so the reported SVR results apply specifically to this configuration.
+SVR with an RBF kernel was included as a more flexible nonlinear alternative \cite{smola2004svr}. SVR seeks a function whose deviations from the observed targets remain within an $\epsilon$-insensitive margin while penalizing deviations outside that margin. The experiment used $C=10$ and $\epsilon=0.1$. Because SVR is sensitive to scale, the input predictors were processed using the same standardization and encoding pipeline as Linear Regression, and the target variable was standardized during fitting through a transformed-target regressor. Predictions were then automatically returned on the original arrival-count scale. No hyperparameter search was performed, so the reported SVR results apply specifically to this configuration.
 
 \subsection{Evaluation Metrics}
 Performance was evaluated using MAE, MSE, RMSE, and $R^2$, as required for a regression problem. For $n$ observations with actual values $y_i$ and predictions $\hat{y}_i$, MAE and RMSE are defined as
@@ -189,9 +179,8 @@ Support Vector Regression & Test & 2,901.56 & $1.652\times10^7$ & 4,064.67 & 0.8
 \end{tabular}
 \end{table*}
 
-The full-feature Linear Regression model also clearly outperformed the reduced-feature alternative. On the test subset, removing year, exchange rate, number of rooms, and the air-passenger fares index increased RMSE from 6,729.14 to 12,478.47 and reduced $R^2$ from 0.546 to $-0.561$. This result suggests that variables with modest individual correlations can still provide important joint information.
-
-Figure~\ref{fig:split-comparison} visualizes the effect of evaluation strategy. All models improve under random testing, but SVR exhibits the largest change. Its strong random performance and weak chronological performance indicate sensitivity to the difference between interpolation within familiar historical regimes and extrapolation to a later recovery regime.
+The full Linear Regression model outperformed the reduced alternative: test RMSE rose from 6,729.14 to 11,944.06 and $R^2$ fell from 0.546 to $-0.430$, showing that weakly correlated variables can still provide useful joint information.
+Fig.~\ref{fig:split-comparison} visualizes the effect of evaluation strategy. All models improve under random testing, but SVR exhibits the largest change. Its strong random performance and weak chronological performance indicate sensitivity to the difference between interpolation within familiar historical regimes and extrapolation to a later recovery regime.
 
 \begin{figure*}[htbp]
 \centering
@@ -200,17 +189,8 @@ Figure~\ref{fig:split-comparison} visualizes the effect of evaluation strategy. 
 \label{fig:split-comparison}
 \end{figure*}
 
-The residual plot in Fig.~\ref{fig:residuals} shows that errors are not distributed uniformly over the prediction range. Larger residual magnitudes remain for some observations, supporting the conclusion that a single global model does not fully represent country-specific recovery behavior and high-volume arrival months.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\columnwidth]{figures/best_model_residuals.png}
-\caption{Residuals of the best chronological test model.}
-\label{fig:residuals}
-\end{figure}
-
 \subsection{Interpretation of Results}
-Linear Regression was selected as the stronger forecasting model because it generalized more consistently across both chronological holdout years. The Polynomial Regression model's validation $R^2$ of 0.008 suggests that the additional quadratic month term contributed little useful explanatory power in 2023. Its lower test MAE but higher test RMSE further suggests uneven performance: it may improve typical predictions while producing several comparatively large errors. SVR deteriorated from a chronological validation RMSE of 8,510.18 to a test RMSE of 12,111.04. Its 2024 $R^2$ of $-0.470$ indicates poor generalization to the latest year under the selected RBF-kernel settings, despite its strong random-test performance. More specifically, since $1-R^2=1.470$, the SVR's sum of squared prediction errors was approximately 1.47 times that of the test-set mean baseline. Thus, the negative value does not indicate an invalid metric; it indicates that the configured SVR was less accurate than assigning every 2024 observation the same mean value.
+The more consistent forecasting across both chronological holdout years over the time period led to the selection of Linear Regression as the better forecasting model. This indicates a little useful explanatory power from the added quadratic month term in 2023 because the validation $R^2$ of the Polynomial Regression model is low at 0.008. Its lower test MAE but higher test RMSE further suggests uneven performance: it may improve typical predictions while producing several comparatively large errors. SVR deteriorated from a chronological validation RMSE of 8,510.18 to a test RMSE of 12,111.04. Its 2024 $R^2$ of $-0.470$ indicates poor generalization to the latest year under the selected RBF-kernel settings, despite its strong random-test performance. More specifically, since $1-R^2=1.470$, the SVR's sum of squared prediction errors was approximately 1.47 times that of the test-set mean baseline. Thus, the negative value does not indicate an invalid metric; it indicates that the configured SVR was less accurate than assigning every 2024 observation the same mean value.
 
 The relatively poor chronological $R^2$ values are largely attributable to a temporal distribution shift caused by COVID-19. The 2018--2022 training set is not governed by one stable tourism pattern: it contains relatively high pre-pandemic arrivals, a sharp collapse during the pandemic, and only the beginning of recovery. The 2023 validation set and 2024 test set instead represent later stages of recovery, during which arrivals increased gradually but followed a pattern different from both the pre-pandemic and pandemic periods. Consequently, the relationships between the year, economic variables, seasonal conditions, and arrivals differ substantially among the training, validation, and test sets. The models must extrapolate from this mixed training history to a new recovery regime, which increases error and reduces $R^2$.
 
@@ -228,11 +208,10 @@ The study has several limitations. First, 750 observations constitute a relative
 Future work could add lagged arrival counts, public holidays, events, travel-restriction indicators, flight capacity, and origin-specific macroeconomic variables. If permitted by the course scope, SVR could also be tuned on the validation period by testing $C$, $\epsilon$, and kernel-width values without using the test set for model selection. Any additional algorithms should remain within those covered in the course and should be compared using the same chronological partitions.
 
 \section{Conclusion}
-This study established an initial machine-learning approach for predicting tourist arrivals to Sri Lanka using a combination of temporal, origin-country, economic, environmental, and tourism-capacity features. Linear Regression, second-degree Polynomial Regression, and RBF-kernel SVR were evaluated using both chronological and random data partitions. Under the primary chronological design, Linear Regression achieved the strongest overall generalization, with a 2024 test RMSE of 6,729.14 and an $R^2$ score of 0.546, while SVR produced an RMSE of 12,111.04 and an $R^2$ of $-0.470$. Under random testing, SVR achieved a substantially stronger RMSE of 4,064.67 and an $R^2$ of 0.835. This difference shows that random splitting creates a much easier interpolation task by mixing pre-pandemic, pandemic, and recovery observations across the subsets. In contrast, chronological evaluation exposes the COVID-related structural break: tourism collapsed and then recovered gradually under a different pattern, leaving the training, validation, and test distributions substantially different. Therefore, the chronological results provide the more credible estimate of future-year forecasting ability. Although the linear model captures a meaningful portion of arrival variation, its error level and the exceptional changes within the study period show that richer time-dependent, crisis-related, and country-specific predictors are needed for reliable operational forecasts.
+This study established an initial machine-learning approach for predicting tourist arrivals to Sri Lanka using a combination of temporal, origin-country, economic, environmental, and tourism-capacity features. Linear Regression, second-degree Polynomial Regression, and RBF-kernel SVR were evaluated using both chronological and random data partitions. Under the primary chronological design, Linear Regression achieved the strongest overall generalization, with a 2024 test RMSE of 6,729.14 and an $R^2$ score of 0.546, while SVR produced an RMSE of 12,111.04 and an $R^2$ of $-0.470$. Under random testing, SVR achieved a substantially stronger RMSE of 4,064.67 and an $R^2$ of 0.835. This difference shows that random splitting creates a much easier interpolation task by mixing pre-pandemic, pandemic, and recovery observations across the subsets. Chronological evaluation, on the other hand, reveals the COVID-related structural break: the distribution of tourism collapsed and then slowly rebounded following a different pattern, thus resulting in significantly different distributions for the training, validation, and test sets. Thus, the chronological results give a more reliable prediction of the forecasting performance of the future years. While the linear model accounts for a significant fraction of the variation in arrivals, the level of error in the model, and the significant changes in the study period indicate a need for more detailed time-dependent, crisis-related, and country-specific predictors to ensure reliable operational forecasts.
 
 \section*{Acknowledgment}
-% TODO: State any permitted assistance, data providers, or institutional support.
-The author acknowledges the academic guidance provided through the ET-3043 Machine Learning course.
+The author sincerely thanks Eng. S. U. Dampage, lecturer for the ET-3043 Machine Learning module, for his clear instruction, practical insights, and continued encouragement throughout this project. Appreciation is also extended to the author's batchmates for their collaboration, constructive discussions, and support in overcoming challenges during the learning process.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
