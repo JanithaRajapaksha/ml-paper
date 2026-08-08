@@ -66,13 +66,66 @@ Total & 2018--2024 & 750 \\
 \subsection{Exploratory Data Analysis}
 Exploratory analysis examined the target distribution, total arrivals over time, the leading origin countries, monthly seasonality, and correlations between numerical variables and the target. Among the numerical predictors, the air-passenger fares index showed the strongest positive linear correlation with arrivals ($r=0.241$), while precipitation hours showed the strongest negative correlation ($r=-0.255$). These correlations are modest and do not account for the categorical effect of origin country, but they suggest that both economic and seasonal conditions are relevant. The time series also contains the sharp changes associated with the COVID-19 period, making generalization to later years challenging.
 
-% TODO: Export one compact EDA figure from the notebook to paper/figures and
-% include it here. Every figure should be discussed in the surrounding text.
+Figure~\ref{fig:target-distribution} confirms that arrival counts are right-skewed: most country-month observations are concentrated at lower values, while a smaller number of high-volume observations form a long upper tail. This variation explains why RMSE is consistently higher than MAE, since RMSE places more weight on the comparatively large errors made for high-arrival observations.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/target_distribution.png}
+\caption{Frequency distribution of monthly tourist-arrival counts across all country-month observations.}
+\label{fig:target-distribution}
+\end{figure}
+
+The distribution by origin country is shown in Fig.~\ref{fig:country-distribution}. India contributes the largest cumulative number of arrivals in the dataset, followed by the United Kingdom and Russia. The pronounced differences among countries show that the target is also imbalanced across origin markets. This supports treating origin country as a categorical predictor and helps explain why a single global model can produce larger errors for high-volume countries.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/top_origin_countries.png}
+\caption{Total tourist arrivals from the ten leading origin countries in the dataset.}
+\label{fig:country-distribution}
+\end{figure}
+
+Figure~\ref{fig:feature-correlations} compares the individual Pearson correlations between each numerical predictor and tourist arrivals. The air-passenger fares index has the strongest positive correlation, while precipitation hours has the strongest negative correlation. However, all coefficients are relatively modest. The graph therefore indicates that no single numerical predictor explains tourist arrivals adequately and that the models must combine temporal, economic, environmental, capacity, and origin-country information.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{figures/target_feature_correlations.png}
+\caption{Pearson correlations between numerical predictors and tourist arrivals.}
+\label{fig:feature-correlations}
+\end{figure*}
+
+The monthly totals in Fig.~\ref{fig:arrival-timeline} expose the main temporal challenge in the dataset. Arrivals were relatively high before the pandemic, collapsed during the COVID-19 travel restrictions, and then recovered progressively. The later recovery does not simply reproduce the earlier pattern, so observations in 2023 and 2024 are drawn from a different temporal regime from much of the training data.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/monthly_arrivals_timeline.png}
+\caption{Monthly tourist arrivals over the 2018--2024 study period, showing the COVID-19 collapse and subsequent recovery.}
+\label{fig:arrival-timeline}
+\end{figure*}
+
+Figure~\ref{fig:seasonal-boxplot} shows that both the median and spread of arrivals vary across calendar months. However, substantial overlap remains among the monthly distributions, indicating that month alone cannot explain the target and motivating the inclusion of country, economic, environmental, and tourism-capacity predictors.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/monthly_arrivals_boxplot.png}
+\caption{Seasonal distribution of tourist arrivals across calendar months.}
+\label{fig:seasonal-boxplot}
+\end{figure}
 
 \subsection{Data Preparation}
 A date variable was constructed from the year and month for chronological splitting and visualization, but it was excluded from the model inputs. Month names were converted to their calendar positions. Numerical predictors were standardized, while month and origin country were one-hot encoded; unknown categories were ignored so that the pipeline could process future data. These transformations were fitted using only the training subset through a scikit-learn pipeline, reducing the risk of data leakage.
 
 As shown in Table~\ref{tab:dataset-split}, data from 2018--2022 were used for training, 2023 for validation, and 2024 for final testing. This chronological experiment is the primary evaluation because the intended task is prediction of later observations from earlier data. A second experiment randomly divided individual observations into approximately 70\% training, 15\% validation, and 15\% testing subsets using a fixed random state of 42. The random experiment was included to measure interpolation when all subsets are drawn from the same overall historical period. It was not treated as evidence of future-year forecasting performance because rows from the same month and year share several economic, weather, and tourism-capacity values. A reduced feature set was also examined as a secondary experiment, but it performed substantially worse than the complete feature set.
+
+The preprocessing pipeline was fitted independently within each training partition. Consequently, numerical scaling parameters and one-hot-encoding categories were learned without using the corresponding validation or test targets. The notebook also visualizes the target distribution after chronological splitting and saves the plot as \texttt{chronological\_split\_distribution.png}. This diagnostic makes the higher target level and changed spread in the later recovery years visible and supports the distribution-shift interpretation.
+
+\IfFileExists{figures/chronological_split_distribution.png}{%
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/chronological_split_distribution.png}
+\caption{Target distributions after chronological training, validation, and test splitting.}
+\label{fig:split-distribution}
+\end{figure}
+}{}
 
 \subsection{Regression Models}
 Linear Regression was used as an interpretable baseline. For a feature vector $\mathbf{x}$, its prediction is
@@ -138,11 +191,26 @@ Support Vector Regression & Test & 2,901.56 & $1.652\times10^7$ & 4,064.67 & 0.8
 
 The full-feature Linear Regression model also clearly outperformed the reduced-feature alternative. On the test subset, removing year, exchange rate, number of rooms, and the air-passenger fares index increased RMSE from 6,729.14 to 12,478.47 and reduced $R^2$ from 0.546 to $-0.561$. This result suggests that variables with modest individual correlations can still provide important joint information.
 
-% TODO: Export and include an actual-versus-predicted or residual figure from
-% the notebook. Refer to the figure explicitly and discuss visible error patterns.
+Figure~\ref{fig:split-comparison} visualizes the effect of evaluation strategy. All models improve under random testing, but SVR exhibits the largest change. Its strong random performance and weak chronological performance indicate sensitivity to the difference between interpolation within familiar historical regimes and extrapolation to a later recovery regime.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/split_strategy_comparison.png}
+\caption{RMSE and $R^2$ comparison for chronological and random test strategies.}
+\label{fig:split-comparison}
+\end{figure*}
+
+The residual plot in Fig.~\ref{fig:residuals} shows that errors are not distributed uniformly over the prediction range. Larger residual magnitudes remain for some observations, supporting the conclusion that a single global model does not fully represent country-specific recovery behavior and high-volume arrival months.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/best_model_residuals.png}
+\caption{Residuals of the best chronological test model.}
+\label{fig:residuals}
+\end{figure}
 
 \subsection{Interpretation of Results}
-Linear Regression was selected as the stronger forecasting model because it generalized more consistently across both chronological holdout years. The Polynomial Regression model's validation $R^2$ of 0.008 suggests that the additional quadratic month term contributed little useful explanatory power in 2023. Its lower test MAE but higher test RMSE further suggests uneven performance: it may improve typical predictions while producing several comparatively large errors. SVR deteriorated from a chronological validation RMSE of 8,510.18 to a test RMSE of 12,111.04. Its 2024 $R^2$ of $-0.470$ indicates poor generalization to the latest year under the selected RBF-kernel settings, despite its strong random-test performance.
+Linear Regression was selected as the stronger forecasting model because it generalized more consistently across both chronological holdout years. The Polynomial Regression model's validation $R^2$ of 0.008 suggests that the additional quadratic month term contributed little useful explanatory power in 2023. Its lower test MAE but higher test RMSE further suggests uneven performance: it may improve typical predictions while producing several comparatively large errors. SVR deteriorated from a chronological validation RMSE of 8,510.18 to a test RMSE of 12,111.04. Its 2024 $R^2$ of $-0.470$ indicates poor generalization to the latest year under the selected RBF-kernel settings, despite its strong random-test performance. More specifically, since $1-R^2=1.470$, the SVR's sum of squared prediction errors was approximately 1.47 times that of the test-set mean baseline. Thus, the negative value does not indicate an invalid metric; it indicates that the configured SVR was less accurate than assigning every 2024 observation the same mean value.
 
 The relatively poor chronological $R^2$ values are largely attributable to a temporal distribution shift caused by COVID-19. The 2018--2022 training set is not governed by one stable tourism pattern: it contains relatively high pre-pandemic arrivals, a sharp collapse during the pandemic, and only the beginning of recovery. The 2023 validation set and 2024 test set instead represent later stages of recovery, during which arrivals increased gradually but followed a pattern different from both the pre-pandemic and pandemic periods. Consequently, the relationships between the year, economic variables, seasonal conditions, and arrivals differ substantially among the training, validation, and test sets. The models must extrapolate from this mixed training history to a new recovery regime, which increases error and reduces $R^2$.
 
@@ -151,7 +219,7 @@ Random splitting obscures much of this difficulty because it distributes observa
 The remaining error is substantial in practical terms. For example, the linear model underestimated January 2024 arrivals from India and Russia by approximately 6,092 and 16,850 visitors, respectively. Such errors indicate that origin-specific recovery patterns and external shocks are not fully represented by the available predictors. Consequently, the model is more suitable as a baseline for comparative analysis than as a stand-alone operational forecasting system.
 
 \section{Discussion}
-The results show that additional model complexity does not necessarily improve future-year forecasting performance. A single quadratic representation of month cannot adequately describe structural changes across years or differences among origin countries. Similarly, the RBF kernel did not extrapolate effectively from the mixed pre-pandemic, pandemic, and early-recovery training patterns to the later recovery years. The contrast between SVR's chronological test $R^2$ of $-0.470$ and random-test $R^2$ of 0.835 is particularly informative. It shows that SVR can fit nonlinear relationships when training and testing come from similar mixed-period distributions, but performs poorly when required to generalize to a temporally different regime. The result should therefore not be interpreted as evidence that SVR is unsuitable for tourism prediction in general. Conversely, the full linear model benefits from using the complete collection of economic, weather, capacity, and categorical variables, even though the pairwise numerical correlations with the target are weak.
+The results show that additional model complexity does not necessarily improve future-year forecasting performance. A single quadratic representation of month cannot adequately describe structural changes across years or differences among origin countries. Similarly, an RBF kernel primarily interpolates among patterns represented in its training feature space and does not naturally extend a rising temporal trend beyond that space. It therefore did not extrapolate effectively from the mixed pre-pandemic, pandemic, and early-recovery training patterns to the later recovery years. The contrast between SVR's chronological test $R^2$ of $-0.470$ and random-test $R^2$ of 0.835 is particularly informative. It shows that SVR can fit nonlinear relationships when training and testing come from similar mixed-period distributions, but performs poorly when required to generalize to a temporally different regime. This limitation may be intensified by the relatively small sample, one-hot-encoded country feature space, absence of lagged arrival predictors, and use of fixed $C$, $\epsilon$, and kernel-width settings without time-aware hyperparameter tuning. The result should therefore not be interpreted as evidence that SVR is unsuitable for tourism prediction in general. Conversely, the full linear model benefits from using the complete collection of economic, weather, capacity, and categorical variables, even though the pairwise numerical correlations with the target are weak.
 
 A strength of the study is its leakage-aware chronological evaluation together with an explicit random-split comparison. The comparison demonstrates why a favorable random score should not automatically be reported as forecasting performance. Comparable preprocessing pipelines are applied consistently, the SVR target is scaled using training data, and all four regression metrics required by the assignment are reported. Linear Regression also provides a transparent baseline that can be reproduced and interpreted readily.
 
